@@ -8,16 +8,19 @@ from utils.detect import detect_mob
 from utils.tts import speak, update_voice_settings
 from hotkeys import HotkeyManager
 
+
 settings = {
     "volume": 1.0,
     "voice": "default",
     "hotkey": "f8"
 }
 
+
 last_spoken = ""
 immediate_detection = False
 detection_event = Event()
 hotkey_listener = None
+
 
 def on_hotkey_pressed():
     global immediate_detection
