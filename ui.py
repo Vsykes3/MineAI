@@ -1,15 +1,16 @@
 import tkinter as tk
 from tkinter import ttk
-from PIL import Image, ImageTk
+from tkinter import font as tkfont
+import os
+import random
 
 class MinecraftSlider(tk.Canvas):
     def __init__(self, master, variable, from_=0, to=1, **kwargs):
-        super().__init__(master, width=200, height=24, bg="#8b5a2b", highlightthickness=0, **kwargs)
+        super().__init__(master, width=200, height=24, bg= "gray24", highlightthickness=0, **kwargs)
         self.variable = variable
         self.from_ = from_
         self.to = to
-        self.slider_pos = 0
-        self.slider = self.create_rectangle(0, 0, 0, 0, fill="#d7c297", outline="#3a2c1e")
+        self.slider = self.create_rectangle(0, 0, 0, 0, fill="white", outline="white")
         self.bind("<B1-Motion>", self.on_drag)
         self.bind("<Button-1>", self.on_click)
         self.draw_slider()
@@ -31,68 +32,79 @@ class MinecraftSlider(tk.Canvas):
         width = self.winfo_width()
         value_ratio = (self.variable.get() - self.from_) / (self.to - self.from_)
         pos = int(value_ratio * width)
-        self.slider_pos = pos
         self.coords(self.slider, pos - 10, 4, pos + 10, 20)
 
 class SettingsUI:
     def __init__(self, root, on_settings_change):
-        self.on_settings_change = on_settings_change
         self.root = root
+        self.on_settings_change = on_settings_change
         self.root.title("Mob TTS Assist")
         self.root.geometry("320x260")
         self.root.resizable(False, False)
 
-        try:
-            self.block_font = ("Minecraftia", 10)
-        except:
+        # Font loading
+        font_path = "Minecraftia.ttf"  # Put this in the same folder
+        if os.path.exists(font_path):
+            self.block_font = tkfont.Font(file=font_path, size=10)
+        else:
             self.block_font = ("Courier", 10, "bold")
 
-        # Background tiling
-        self.bg_tile = ImageTk.PhotoImage(Image.open("C:/Users/vaibh/Downloads/brown_tile.png").resize((32, 32)))
-        self.canvas = tk.Canvas(root, width=320, height=260)
+        self.canvas = tk.Canvas(root, width=320, height=260, highlightthickness=0)
         self.canvas.pack(fill="both", expand=True)
-        for x in range(0, 320, 32):
-            for y in range(0, 260, 32):
-                self.canvas.create_image(x, y, anchor="nw", image=self.bg_tile)
-
-        self.ui_frame = tk.Frame(root, bg="#a07e4d")
-        self.canvas.create_window(0, 0, anchor="nw", window=self.ui_frame, width=320, height=260)
+        self.draw_tiled_background()
 
         self.volume_var = tk.DoubleVar(value=1.0)
         self.voice_var = tk.StringVar(value="default")
         self.hotkey_var = tk.StringVar(value="f8")
 
-        self.add_label("Volume")
-        self.volume_slider = MinecraftSlider(self.ui_frame, self.volume_var, from_=0, to=1)
-        self.volume_slider.pack(pady=5)
+        y = 20
+        self.add_label("Volume", y)
+        y += 30
+        self.volume_slider = MinecraftSlider(self.canvas, self.volume_var, from_=0, to=1)
+        self.canvas.create_window(160, y, window=self.volume_slider)
+        y += 40
 
-        self.add_label("Voice")
-        self.voice_dropdown = ttk.Combobox(self.ui_frame, textvariable=self.voice_var,
-                                           values=["default", "female", "male"], state="readonly", font=self.block_font)
-        self.voice_dropdown.pack(fill='x', padx=20)
+        self.add_label("Voice", y)
+        y += 30
+        self.voice_dropdown = ttk.Combobox(
+            root, textvariable=self.voice_var,
+            values=["default", "female", "male"], state="readonly",
+            font=self.block_font
+        )
+        self.canvas.create_window(160, y, window=self.voice_dropdown, width=200)
         self.voice_dropdown.bind("<<ComboboxSelected>>", lambda _: self.update_settings())
+        y += 40
 
-        self.add_label("Set Hotkey (click then press key)")
-        self.hotkey_button = tk.Label(self.ui_frame, text=self.hotkey_var.get().upper(),
-                                      bg="#c6a664", font=self.block_font, bd=3,
-                                      relief="raised", padx=10, pady=4)
-        self.hotkey_button.pack(pady=5)
+        self.add_label("Set Hotkey (click then press key)", y)
+        y += 30
+        self.hotkey_button = tk.Label(
+            root, text=self.hotkey_var.get().upper(), bg="#c6c6c6",
+            font=self.block_font, bd=3, relief="raised", padx=10, pady=4
+        )
+        self.canvas.create_window(160, y, window=self.hotkey_button)
         self.hotkey_button.bind("<Button-1>", lambda e: self.start_hotkey_capture())
-        self.hotkey_button.bind("<Enter>", lambda e: self.hotkey_button.config(bg="#e7d08c"))
-        self.hotkey_button.bind("<Leave>", lambda e: self.hotkey_button.config(bg="#c6a664"))
+        self.hotkey_button.bind("<Enter>", lambda e: self.hotkey_button.config(bg="#d8d8d8"))
+        self.hotkey_button.bind("<Leave>", lambda e: self.hotkey_button.config(bg="#c6c6c6"))
 
         self.listening_for_key = False
         self.update_settings()
         self.root.after(100, self.refresh_slider)
+
+    def draw_tiled_background(self):
+        tile_colors = ["#926c4d", "#ad9f8e", "#593d29", "#79553a"]
+        for x in range(0, 320, 32):
+            for y in range(0, 260, 32):
+                color = random.choice(tile_colors)
+                self.canvas.create_rectangle(x, y, x+32, y+32, fill=color, outline=color)
 
     def refresh_slider(self):
         self.volume_slider.draw_slider()
         self.update_settings()
         self.root.after(100, self.refresh_slider)
 
-    def add_label(self, text):
-        label = tk.Label(self.ui_frame, text=text, bg="#a07e4d", fg="white", font=self.block_font)
-        label.pack(pady=4)
+    def add_label(self, text, y):
+        label = tk.Label(self.root, text=text, bg="gray24", fg="white", font=self.block_font)
+        self.canvas.create_window(160, y, window=label)
 
     def start_hotkey_capture(self):
         if self.listening_for_key:
